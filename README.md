@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**急诊科通用医疗基础模型 | Emergency Department Foundation Model**
+**急诊科基础模型 | ED-Foundation Model**
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -16,7 +16,7 @@
 
 ## 🏥 模型简介
 
-**BEiT3-ED Foundation Model** 是首个专为急诊科设计的通用多模态医疗基础模型。基于BEiT3架构，采用**线性探测(Linear Probing)**训练策略，支持多种急诊医疗任务和数据集。
+**ED-Foundation Model** 是首个专为急诊科设计的通用多模态医疗基础模型。基于BEiT3架构，采用**线性探测(Linear Probing)**训练策略，支持多种急诊医疗任务和数据集。
 
 ### ✨ 核心特点
 

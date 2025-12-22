@@ -1,4 +1,4 @@
-# BEiT3-ED Foundation Model
+# ED-Foundation Model
 
 <div align="center">
 

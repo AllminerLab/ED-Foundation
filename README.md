@@ -8,8 +8,6 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 
-[English](#english) | [中文](#chinese)
-
 </div>
 
 ---
@@ -108,98 +106,6 @@ model = BEiT3EDFoundationModel.from_pretrained(
     task_type='early_triage'          # 指定任务类型
 )
 
-# 准备输入
-tokenizer = SimpleEDTokenizer()
-text = "患者年龄65岁，男性，主诉胸痛3小时，血压150/90mmHg，心率95次/分"
-inputs = tokenizer(text, max_length=512, padding='max_length', return_tensors='pt')
-
-# 推理
-predictions, probabilities = model.predict(
-    input_ids=inputs['input_ids'],
-    attention_mask=inputs['attention_mask']
-)
-
-print(f"预测分级: {predictions.item() + 1}")  # 输出: 1-4级
-print(f"概率分布: {probabilities}")
-```
-
-### 不同数据集使用示例
-
-#### 1. 急诊分诊（SYSMH-S-Triage）
-
-```python
-model = BEiT3EDFoundationModel.from_pretrained(
-    'pytorch_model.bin',
-    dataset_name='SYSMH-S-Triage',
-    task_type='early_triage'
-)
-
-# 中文文本输入
-text = "患者主诉呼吸困难，血氧饱和度89%"
-inputs = tokenizer(text, max_length=512, padding='max_length', return_tensors='pt')
-predictions, probs = model.predict(**inputs)
-
-# 输出分诊级别（1-4级）
-triage_level = predictions.item() + 1
-print(f"分诊级别: {triage_level}级")
-```
-
-#### 2. 住院预测（SYSMH-ED-Outcome）
-
-```python
-model = BEiT3EDFoundationModel.from_pretrained(
-    'pytorch_model.bin',
-    dataset_name='SYSMH-ED-Outcome',
-    task_type='prognosis_prediction'
-)
-
-text = "患者诊断急性心肌梗死，心电图示ST段抬高"
-inputs = tokenizer(text, max_length=512, padding='max_length', return_tensors='pt')
-predictions, probs = model.predict(**inputs)
-
-# 输出住院预测
-admission = "需要住院" if predictions.item() == 1 else "不需要住院"
-print(f"住院预测: {admission}, 置信度: {probs[0, predictions.item()]:.2%}")
-```
-
-#### 3. 多模态多任务（MIMIC-IV-EXT-MDS-ED）
-
-```python
-from PIL import Image
-import torchvision.transforms as transforms
-
-model = BEiT3EDFoundationModel.from_pretrained(
-    'pytorch_model.bin',
-    dataset_name='MIMIC-IV-EXT-MDS-ED',
-    task_type='full_process_decision'
-)
-
-# 文本输入
-text = "Patient presents with chest pain and shortness of breath..."
-inputs = tokenizer(text, max_length=512, padding='max_length', return_tensors='pt')
-
-# 图像输入（胸部X光）
-image = Image.open('chest_xray.jpg')
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
-pixel_values = transform(image).unsqueeze(0)
-
-# 多任务预测
-predictions, probabilities = model.predict(
-    input_ids=inputs['input_ids'],
-    attention_mask=inputs['attention_mask'],
-    pixel_values=pixel_values
-)
-
-# 输出所有任务的预测
-for task_name, pred in predictions.items():
-    prob = probabilities[task_name][0, pred.item()]
-    print(f"{task_name}: {pred.item()} (置信度: {prob:.2%})")
-```
-
 ## 🔧 训练指南
 
 ### 线性探测训练
@@ -227,27 +133,6 @@ python early_triage/infer_sysmh_n_triage.py \
     --output predictions.csv
 ```
 
-### 数据格式
-
-#### 单任务数据格式
-```csv
-text,label
-"患者主诉...",2
-"患者主诉...",1
-```
-
-#### 多任务数据格式
-```csv
-text,imaging_exam,lab_tests,observation,specialist_consultation
-"患者数据...",1,0,1,0
-"患者数据...",0,1,0,1
-```
-
-#### 多模态数据格式
-```csv
-text,image_path,label
-"Patient data...",/path/to/image.jpg,1
-```
 
 详细训练指南请参考：[datasets_scripts/DATASETS_GUIDE.md](datasets_scripts/DATASETS_GUIDE.md)
 
@@ -275,39 +160,6 @@ text,image_path,label
 | 任务头 | ~1-5M | ✅ 可训练 |
 | **总计** | **~220M** | **线性探测** |
 
-## 🎯 性能指标
-
-### 早期急诊分诊
-
-| 数据集 | 准确率 | F1分数 | 备注 |
-|--------|--------|--------|------|
-| SYSMH-S-Triage | TBD | TBD | 4分类 |
-| MIMIC-IV-ED-Triage | TBD | TBD | 5分类 |
-| SYSMH-N-Triage (零样本) | TBD | TBD | 跨医院 |
-| GTCMH-Triage (零样本) | TBD | TBD | 跨医院 |
-
-### 预后预测
-
-| 数据集 | AUROC | AUPRC | 备注 |
-|--------|-------|-------|------|
-| SYSMH-ED-Outcome | TBD | TBD | 住院预测 |
-| MIMIC-IV-ED-AMI | TBD | TBD | 死亡预测 |
-| MIMIC-IV-ED-Outcome | TBD | TBD | 多任务 |
-
-### 全流程决策
-
-| 数据集 | 任务 | AUROC | AUPRC |
-|--------|------|-------|-------|
-| MIMIC-IV-EXT-MDS-ED | Mechanical Ventilation | TBD | TBD |
-| | ICU Stay | TBD | TBD |
-| | 7-day Mortality | TBD | TBD |
-| | 28-day Mortality | TBD | TBD |
-| SYSMH-ED-MD | Imaging Exam | TBD | TBD |
-| | Lab Tests | TBD | TBD |
-| | Observation | TBD | TBD |
-| | Specialist Consultation | TBD | TBD |
-
-*请根据实际评估结果更新性能指标*
 
 ## 📦 文件结构
 
@@ -327,7 +179,7 @@ huggingface_model/
     ├── train_template.py       # 训练模板
     ├── early_triage/           # 早期分诊脚本
     ├── prognosis_prediction/   # 预后预测脚本
-    └── full_process_decision/  # 全流程决策脚本
+    └── MDs/  # 全流程决策脚本
 ```
 
 ## ⚠️ 重要说明
@@ -344,19 +196,6 @@ huggingface_model/
 3. **零样本性能**: 跨医院零样本推理效果可能有差异
 4. **伦理考虑**: 注意患者隐私保护，符合医疗伦理规范
 
-## 📚 引用
-
-如果您使用了本模型，请引用：
-
-```bibtex
-@misc{beit3-ed-foundation-2024,
-  title={BEiT3-ED: A Foundation Model for Emergency Department Decision Support},
-  author={Your Name},
-  year={2024},
-  howpublished={\url{https://huggingface.co/your-username/beit3-ed-foundation}},
-  note={Supports 9 datasets across 3 task types with linear probing strategy}
-}
-```
 
 ## 📄 许可证
 
@@ -365,79 +204,8 @@ huggingface_model/
 ## 🤝 贡献
 
 欢迎贡献！请提交Issue或Pull Request。
-
-## 📧 联系方式
-
-- GitHub: [your-github]
-- Email: your.email@example.com
-- Hugging Face: [your-username]
-
 ## 🙏 致谢
 
 - **数据集**: MIMIC-IV-ED, SYSMH, GTCMH
 - **基础模型**: [BEiT](https://github.com/microsoft/unilm/tree/master/beit)
 - **库**: [timm](https://github.com/huggingface/pytorch-image-models), [transformers](https://github.com/huggingface/transformers)
-
----
-
-<a name="english"></a>
-
-## 🏥 Model Description (English)
-
-**BEiT3-ED Foundation Model** is the first general-purpose multimodal medical foundation model designed specifically for emergency departments. Built on the BEiT3 architecture with **Linear Probing** training strategy, it supports multiple ED tasks and datasets.
-
-### Key Features
-
-- 🎯 **Versatile**: Supports 9 datasets covering full ED workflow
-- 🔀 **Multimodal**: Handles text, chest X-rays, and ECG
-- 🚀 **Efficient**: Linear probing with frozen encoders
-- 🌍 **Multilingual**: Supports Chinese and English
-- 🔄 **Zero-shot**: Cross-hospital zero-shot inference
-- 📊 **Multi-task**: Single model for multiple predictions
-
-### Supported Tasks
-
-#### Type 1: Early ED Triage (4 datasets)
-- **SYSMH-S-Triage**: 4-class triage (training)
-- **MIMIC-IV-ED-Triage**: 5-class triage (training)
-- **SYSMH-N-Triage**: 4-class (zero-shot)
-- **GTCMH-Triage**: 4-class (zero-shot)
-
-#### Type 2: Prognosis Prediction (3 datasets)
-- **SYSMH-ED-Outcome**: Admission prediction
-- **MIMIC-IV-ED-AMI**: Mortality prediction
-- **MIMIC-IV-ED-Outcome**: Multi-task (Admission, LoS, Severity)
-
-#### Type 3: Full-Process Decision (2 datasets)
-- **MIMIC-IV-EXT-MDS-ED**: 4 tasks (Ventilation, ICU, Mortality 7d/28d)
-- **SYSMH-ED-MD**: 4 tasks (Imaging, Labs, Observation, Consultation)
-
-### Quick Start
-
-```python
-from modeling_beit3_ed import BEiT3EDFoundationModel, SimpleEDTokenizer
-
-# Load model
-model = BEiT3EDFoundationModel.from_pretrained(
-    'pytorch_model.bin',
-    dataset_name='MIMIC-IV-ED-Triage',
-    task_type='early_triage'
-)
-
-# Prepare input
-tokenizer = SimpleEDTokenizer()
-text = "65 yo male with chest pain for 3 hours, BP 150/90, HR 95"
-inputs = tokenizer(text, max_length=512, padding='max_length', return_tensors='pt')
-
-# Predict
-predictions, probabilities = model.predict(
-    input_ids=inputs['input_ids'],
-    attention_mask=inputs['attention_mask']
-)
-```
-
-For detailed documentation, see [datasets_scripts/DATASETS_GUIDE.md](datasets_scripts/DATASETS_GUIDE.md)
-
----
-
-**更新日期 | Last Updated**: 2024-12-22

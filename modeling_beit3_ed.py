@@ -2,13 +2,16 @@
 """
 BEiT3-ED Foundation Model - Emergency Department Foundation Model
 急诊科通用基础模型
+General-purpose foundation model for the Emergency Department.
 
 支持三大类任务：
+Supports three major task categories:
 1. 早期急诊分诊 (Early ED Triage)
 2. 预后预测 (Prognosis Prediction)
 3. 全流程急诊决策 (Full-Process ED Decision)
 
 训练策略: 线性探测 (Linear Probing) - 编码器冻结，只训练任务头
+Training strategy: Linear Probing - freeze encoders and train only task heads.
 """
 
 import torch
@@ -20,7 +23,7 @@ import json
 
 
 class TextEncoder(nn.Module):
-    """文本编码器 - 基于Transformer"""
+    """文本编码器 - 基于Transformer / Text encoder based on Transformer."""
     def __init__(self, vocab_size=64010, embed_dim=768, num_layers=12, num_heads=12, max_seq_len=512):
         super().__init__()
         self.embed_dim = embed_dim
@@ -61,7 +64,7 @@ class TextEncoder(nn.Module):
 
 
 class VisionEncoder(nn.Module):
-    """视觉编码器 - 基于BEiT"""
+    """视觉编码器 - 基于BEiT / Vision encoder based on BEiT."""
     def __init__(self, timm_model):
         super().__init__()
         self.backbone = timm_model
@@ -72,7 +75,7 @@ class VisionEncoder(nn.Module):
 
 
 class MultimodalFusion(nn.Module):
-    """多模态融合层"""
+    """多模态融合层 / Multimodal fusion layer."""
     def __init__(self, embed_dim=768, fusion_type='concat'):
         super().__init__()
         self.fusion_type = fusion_type
@@ -105,15 +108,17 @@ class LinearProbingHead(nn.Module):
     """
     线性探测头 - 用于单任务分类
     编码器冻结，只训练这个头
+    Linear probing head for single-task classification.
+    Encoders are frozen; only this head is trained.
     """
     def __init__(self, input_dim=768, num_classes=2, hidden_dim=None):
         super().__init__()
         
         if hidden_dim is None:
-            # 简单线性层
+            # 简单线性层 / Simple linear layer.
             self.classifier = nn.Linear(input_dim, num_classes)
         else:
-            # 带一层隐藏层的分类器
+            # 带一层隐藏层的分类器 / Classifier with one hidden layer.
             self.classifier = nn.Sequential(
                 nn.Linear(input_dim, hidden_dim),
                 nn.ReLU(),
@@ -129,6 +134,8 @@ class MultiTaskLinearHead(nn.Module):
     """
     多任务线性探测头
     每个任务一个独立的线性层
+    Multi-task linear probing head.
+    Each task has an independent linear layer.
     """
     def __init__(self, input_dim=768, task_configs=None):
         super().__init__()
@@ -160,6 +167,12 @@ class BEiT3EDFoundationModel(nn.Module):
     - 多种数据集和任务类型
     - 单模态和多模态输入
     - 零样本推理
+    General-purpose medical foundation model for the Emergency Department,
+    supporting:
+    - Linear probing training strategy with frozen encoders
+    - Multiple datasets and task types
+    - Single-modal and multimodal inputs
+    - Zero-shot inference
     """
     
     def __init__(
@@ -183,14 +196,14 @@ class BEiT3EDFoundationModel(nn.Module):
         self.dataset_name = dataset_name
         self.task_type = task_type
         
-        # 加载配置
+        # 加载配置 / Load configuration.
         if config_path:
             with open(config_path, 'r') as f:
                 self.config = json.load(f)
         else:
             self.config = None
         
-        # 创建编码器（预训练，将被冻结）
+        # 创建编码器（预训练，将被冻结） / Create pretrained encoders that will be frozen.
         timm_model = timm.create_model(
             image_model_name, 
             pretrained=pretrained_vision, 
@@ -200,39 +213,43 @@ class BEiT3EDFoundationModel(nn.Module):
         self.text_encoder = TextEncoder(vocab_size, embed_dim, num_layers, num_heads)
         self.vision_encoder = VisionEncoder(timm_model)
         self.fusion_layer = MultimodalFusion(embed_dim, fusion_type='concat')
+        self.image_mask_feature = nn.Parameter(torch.zeros(embed_dim))
         
-        # 默认冻结编码器
+        # 默认冻结编码器 / Freeze encoders by default.
         self.freeze_encoders()
         
-        # 任务头（将在设置数据集时初始化）
+        # 任务头（将在设置数据集时初始化） / Task head initialized when a dataset is set up.
         self.task_head = None
     
     def freeze_encoders(self):
-        """冻结编码器参数（线性探测策略）"""
+        """冻结编码器参数（线性探测策略） / Freeze encoder parameters for linear probing."""
         for param in self.text_encoder.parameters():
             param.requires_grad = False
         for param in self.vision_encoder.parameters():
             param.requires_grad = False
         for param in self.fusion_layer.parameters():
             param.requires_grad = False
+        self.image_mask_feature.requires_grad = False
     
     def unfreeze_encoders(self):
-        """解冻编码器（如需微调）"""
+        """解冻编码器（如需微调） / Unfreeze encoders when fine-tuning is needed."""
         for param in self.text_encoder.parameters():
             param.requires_grad = True
         for param in self.vision_encoder.parameters():
             param.requires_grad = True
         for param in self.fusion_layer.parameters():
             param.requires_grad = True
+        self.image_mask_feature.requires_grad = True
     
     def setup_dataset(self, dataset_name, task_type, config=None):
         """
         为特定数据集设置任务头
+        Set up the task head for a specific dataset.
         
         Args:
-            dataset_name: 数据集名称
-            task_type: 任务类型 (early_triage/prognosis_prediction/full_process_decision)
-            config: 数据集配置（可选）
+            dataset_name: 数据集名称 / Dataset name.
+            task_type: 任务类型 / Task type (early_triage/prognosis_prediction/full_process_decision).
+            config: 数据集配置（可选） / Optional dataset configuration.
         """
         self.dataset_name = dataset_name
         self.task_type = task_type
@@ -243,36 +260,36 @@ class BEiT3EDFoundationModel(nn.Module):
         if config is None:
             raise ValueError(f"No configuration found for {dataset_name}")
         
-        # 根据配置创建任务头
+        # 根据配置创建任务头 / Create task head from configuration.
         if 'tasks' in config:
-            # 多任务
+            # 多任务 / Multi-task setup.
             task_configs = {}
             for task_name, task_config in config['tasks'].items():
                 task_configs[task_name] = {
                     'num_classes': task_config['num_classes'],
-                    'hidden_dim': 512  # 可配置
+                    'hidden_dim': None  # 单层线性探测头 / Single linear probing head.
                 }
             self.task_head = MultiTaskLinearHead(self.embed_dim, task_configs)
         else:
-            # 单任务
+            # 单任务 / Single-task setup.
             num_classes = config['num_classes']
-            self.task_head = LinearProbingHead(self.embed_dim, num_classes, hidden_dim=512)
+            self.task_head = LinearProbingHead(self.embed_dim, num_classes, hidden_dim=None)
         
         self.modality = config.get('modality', 'text_only')
         self.is_multitask = 'tasks' in config
     
     @classmethod
     def from_pretrained(cls, model_path, dataset_name=None, task_type=None, config_path='config.json', **kwargs):
-        """从预训练权重加载模型"""
+        """从预训练权重加载模型 / Load model from pretrained weights."""
         import os
         
-        # 加载配置
+        # 加载配置 / Load configuration.
         config_file = os.path.join(os.path.dirname(model_path), config_path) if os.path.isfile(model_path) else os.path.join(model_path, config_path)
         
-        # 创建模型
+        # 创建模型 / Create model.
         model = cls(config_path=config_file, **kwargs)
         
-        # 加载权重
+        # 加载权重 / Load weights.
         if os.path.isfile(model_path):
             checkpoint_path = model_path
         else:
@@ -284,14 +301,14 @@ class BEiT3EDFoundationModel(nn.Module):
         else:
             state_dict = checkpoint
         
-        # 只加载编码器权重（任务头会重新初始化）
+        # 只加载编码器权重（任务头会重新初始化） / Load encoder weights only; task heads are reinitialized.
         encoder_state_dict = {k: v for k, v in state_dict.items() 
                              if not k.startswith('task_head') and not k.startswith('task_heads')}
         
         model.load_state_dict(encoder_state_dict, strict=False)
         print(f"✓ 编码器权重已从 {checkpoint_path} 加载")
         
-        # 设置数据集和任务头
+        # 设置数据集和任务头 / Set dataset and task head.
         if dataset_name and task_type:
             model.setup_dataset(dataset_name, task_type)
             print(f"✓ 已配置数据集: {dataset_name} ({task_type})")
@@ -304,33 +321,40 @@ class BEiT3EDFoundationModel(nn.Module):
         attention_mask=None,
         pixel_values=None,
         labels=None,
+        class_weights=None,
         return_dict=True
     ):
         """
         前向传播
+        Forward pass.
         
         Args:
-            input_ids: 文本输入 [batch_size, seq_len]
-            attention_mask: 注意力掩码 [batch_size, seq_len]
-            pixel_values: 图像输入 [batch_size, 3, H, W]
-            labels: 标签（单任务: [batch_size]; 多任务: dict）
-            return_dict: 是否返回字典格式
+            input_ids: 文本输入 / Text input [batch_size, seq_len].
+            attention_mask: 注意力掩码 / Attention mask [batch_size, seq_len].
+            pixel_values: 图像输入 / Image input [batch_size, 3, H, W].
+            labels: 标签 / Labels (single-task: [batch_size]; multi-task: dict).
+            class_weights: 类别权重 / Optional class weights for imbalanced labels.
+            return_dict: 是否返回字典格式 / Whether to return a dictionary.
         """
-        # 编码
+        # 编码 / Encode inputs.
         if self.modality == 'text_only':
-            # 纯文本模态
+            # 纯文本模态 / Text-only modality.
             features = self.text_encoder(input_ids, attention_mask)
         
         elif self.modality == 'multimodal':
-            # 多模态
+            # 多模态 / Multimodal modality.
             text_features = self.text_encoder(input_ids, attention_mask)
-            vision_features = self.vision_encoder(pixel_values)
+            if pixel_values is None:
+                batch_size = input_ids.shape[0]
+                vision_features = self.image_mask_feature.unsqueeze(0).expand(batch_size, -1)
+            else:
+                vision_features = self.vision_encoder(pixel_values)
             features = self.fusion_layer(text_features, vision_features)
         
         else:
             raise ValueError(f"Unsupported modality: {self.modality}")
         
-        # 分类
+        # 分类 / Classify.
         if self.task_head is None:
             raise ValueError("Task head not initialized. Call setup_dataset() first.")
         
@@ -341,17 +365,18 @@ class BEiT3EDFoundationModel(nn.Module):
             'logits': logits
         }
         
-        # 计算损失
+        # 计算损失 / Compute loss.
         if labels is not None:
             if self.is_multitask:
-                # 多任务损失
+                # 多任务损失 / Multi-task loss.
                 total_loss = 0.0
                 losses = {}
                 
                 for task_name, task_logits in logits.items():
                     if task_name in labels:
                         task_labels = labels[task_name]
-                        loss = F.cross_entropy(task_logits, task_labels)
+                        weight = class_weights.get(task_name) if isinstance(class_weights, dict) else None
+                        loss = F.cross_entropy(task_logits, task_labels, weight=weight)
                         losses[f'{task_name}_loss'] = loss
                         total_loss += loss
                 
@@ -359,8 +384,8 @@ class BEiT3EDFoundationModel(nn.Module):
                 outputs['loss'] = total_loss
                 outputs['losses'] = losses
             else:
-                # 单任务损失
-                loss = F.cross_entropy(logits, labels)
+                # 单任务损失 / Single-task loss.
+                loss = F.cross_entropy(logits, labels, weight=class_weights)
                 outputs['loss'] = loss
         
         if return_dict:
@@ -369,7 +394,7 @@ class BEiT3EDFoundationModel(nn.Module):
             return tuple(outputs.values())
     
     def predict(self, input_ids, attention_mask=None, pixel_values=None):
-        """推理接口"""
+        """推理接口 / Inference interface."""
         self.eval()
         with torch.no_grad():
             outputs = self.forward(
@@ -382,7 +407,7 @@ class BEiT3EDFoundationModel(nn.Module):
         logits = outputs['logits']
         
         if self.is_multitask:
-            # 多任务预测
+            # 多任务预测 / Multi-task prediction.
             predictions = {}
             probabilities = {}
             for task_name, task_logits in logits.items():
@@ -392,15 +417,15 @@ class BEiT3EDFoundationModel(nn.Module):
                 probabilities[task_name] = probs
             return predictions, probabilities
         else:
-            # 单任务预测
+            # 单任务预测 / Single-task prediction.
             probs = F.softmax(logits, dim=-1)
             preds = torch.argmax(probs, dim=-1)
             return preds, probs
 
 
-# 简单的Tokenizer
+# 简单的Tokenizer / Simple tokenizer.
 class SimpleEDTokenizer:
-    """简单的ED Foundation Model Tokenizer"""
+    """简单的ED Foundation Model Tokenizer / Simple ED Foundation Model tokenizer."""
     
     def __init__(self, vocab_size=64010):
         self.vocab_size = vocab_size
@@ -451,16 +476,16 @@ class SimpleEDTokenizer:
             }
 
 
-# 辅助函数
+# 辅助函数 / Helper functions.
 def get_dataset_config(dataset_name, task_type, config_path='config.json'):
-    """获取数据集配置"""
+    """获取数据集配置 / Get dataset configuration."""
     with open(config_path, 'r') as f:
         config = json.load(f)
     return config['datasets'][task_type][dataset_name]
 
 
 def list_supported_datasets(config_path='config.json'):
-    """列出所有支持的数据集"""
+    """列出所有支持的数据集 / List all supported datasets."""
     with open(config_path, 'r') as f:
         config = json.load(f)
     

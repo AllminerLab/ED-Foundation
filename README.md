@@ -93,6 +93,10 @@
 
 ## 🚀 快速开始
 
+### 模型权重获取
+
+由于预训练权重文件较大（约 9.8GB），仓库中不直接包含 `pytorch_model.bin`。如需获取完整权重，请在审稿流程中联系通讯作者。
+
 ### 安装依赖
 
 ```bash
@@ -113,6 +117,20 @@ model = BEiT3EDFoundationModel.from_pretrained(
 ```
 
 ## 🔧 训练指南
+
+### Methods 复现工具
+
+仓库提供 `methods_protocol.json` 和 `methods_reproducibility.py`，用于对齐论文 Methods 中的数据集 schema、输入构造、缺失值指示、患者级划分、7 次运行指标汇总、校准误差和分诊资源模拟。所有中间文件默认生成到同一个目录 `artifacts/methods/`，便于审稿和上传仓库时保持文件结构清晰。
+
+```bash
+python methods_reproducibility.py \
+  --artifact-dir artifacts/methods \
+  prepare-dataset \
+  --dataset-name SYSMH-S-Triage \
+  --input-csv /path/to/sysmh_s_triage.csv
+```
+
+详细对应关系见 [METHODS_COMPLIANCE.md](METHODS_COMPLIANCE.md)。
 
 ### 线性探测训练
 
@@ -293,6 +311,10 @@ Decision support across the full ED workflow.
 
 ## 🚀 Quick Start
 
+### Model Weights
+
+The pretrained weight file (`pytorch_model.bin`) is large (about 9.8GB) and is not included directly in this repository. The full weights are available upon request.
+
 ### Install Dependencies
 
 ```bash
@@ -313,6 +335,20 @@ model = BEiT3EDFoundationModel.from_pretrained(
 ```
 
 ## 🔧 Training Guide
+
+### Methods Reproducibility Utilities
+
+The repository includes `methods_protocol.json` and `methods_reproducibility.py` to align the code release with the manuscript Methods, including dataset schemas, input construction, missingness indicators, patient-level splitting, 7-run metric aggregation, calibration error, and triage resource simulation. All intermediate files are generated under one directory by default: `artifacts/methods/`.
+
+```bash
+python methods_reproducibility.py \
+  --artifact-dir artifacts/methods \
+  prepare-dataset \
+  --dataset-name SYSMH-S-Triage \
+  --input-csv /path/to/sysmh_s_triage.csv
+```
+
+See [METHODS_COMPLIANCE.md](METHODS_COMPLIANCE.md) for the Methods-to-code mapping.
 
 ### Linear Probing Training
 

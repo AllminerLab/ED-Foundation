@@ -3,7 +3,7 @@
 This repository is organized so users can map the released code to the Methods
 section of the manuscript without requiring access to private clinical data.
 
-## What Was Added
+## What
 
 - `methods_protocol.json`: machine-readable protocol covering study design,
   pretraining settings, downstream dataset schemas, split rules, task labels,

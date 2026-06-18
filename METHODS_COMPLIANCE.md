@@ -14,25 +14,6 @@ section of the manuscript without requiring access to private clinical data.
 - `modeling_beit3_ed.py`: model definition and linear-probing task heads.
 - `datasets_scripts/`: task-specific training and inference scripts.
 
-## Mapping to Manuscript Methods
-
-| Methods item | Repository support |
-| --- | --- |
-| Multi-center retrospective design, ethics, and no prospective intervention | Recorded in `methods_protocol.json` |
-| Two-stage pretraining: masked modeling and contrastive learning | Pretraining hyperparameters and losses recorded in `methods_protocol.json` |
-| BEIT-3 architectural specification | `config.json`, `methods_protocol.json`, `modeling_beit3_ed.py` |
-| Dataset-specific inputs, labels, split ratios, zero-shot design | `methods_protocol.json` |
-| Template-based input text construction | `methods_reproducibility.py prepare-dataset` |
-| Missing text fields as empty strings and missingness indicators | `methods_reproducibility.py prepare-dataset` |
-| Patient-level or visit-level split generation | `methods_reproducibility.py prepare-dataset` |
-| Linear probing with frozen backbone | `modeling_beit3_ed.py` and `datasets_scripts/train_template.py` |
-| Class-weight balanced cross-entropy | `modeling_beit3_ed.py` optional `class_weights` argument |
-| Seven-run metric aggregation | `methods_reproducibility.py evaluate-runs` |
-| Binary threshold 0.5 and multiclass argmax | `methods_reproducibility.py evaluate-runs` |
-| Sensitivity, precision, F1, macro-F1, high-risk recall | `methods_reproducibility.py evaluate-runs` |
-| Calibration curves and Expected Calibration Error | `methods_reproducibility.py evaluate-runs` |
-| Confusion matrix run closest to the 7-run mean | `methods_reproducibility.py evaluate-runs` |
-| Exploratory non-urgent triage resource aggregation | `methods_reproducibility.py simulate-triage-cost` |
 
 ## Artifact Convention
 

@@ -111,7 +111,7 @@ model = BEiT3EDFoundationModel.from_pretrained(
 
 ### Methods Reproducibility Utilities
 
-The repository includes `methods_protocol.json` and `methods_reproducibility.py` to align the code release with the manuscript Methods, including dataset schemas, input construction, missingness indicators, patient-level splitting, 7-run metric aggregation, calibration error, and triage resource simulation. All intermediate files are generated under one directory by default: `artifacts/methods/`.
+The repository includes `methods_protocol.json` and `methods_reproducibility.py` include dataset schemas, input construction, missingness indicators, patient-level splitting, 7-run metric aggregation, calibration error, and triage resource simulation. All intermediate files are generated under one directory by default: `artifacts/methods/`.
 
 ```bash
 python methods_reproducibility.py \
